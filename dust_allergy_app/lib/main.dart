@@ -1,4 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'screens/symptom_log_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MaterialApp(home: SymptomLogScreen()));
+}
+
+
+/*
+import 'package:flutter/material.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'services/firebase_options.dart';
@@ -130,3 +142,4 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+*/
