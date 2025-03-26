@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "103163531798",
+    "project_id": "dust-allergy-database",
+    "storage_bucket": "dust-allergy-database.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103163531798:android:cadce3ec95f77b6b891b37",
+        "android_client_info": {
+          "package_name": "com.example.dust_allergy_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCl15Hstxi_yrofxQM70EmsYdQA_RuJnt4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
