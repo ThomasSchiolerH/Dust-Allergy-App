@@ -7,7 +7,7 @@ class SymptomLogScreen extends StatefulWidget {
   const SymptomLogScreen({super.key});
 
   @override
-  _SymptomLogScreenState createState() => _SymptomLogScreenState();
+  State<SymptomLogScreen> createState() => _SymptomLogScreenState();
 }
 
 class _SymptomLogScreenState extends State<SymptomLogScreen> {
@@ -18,14 +18,11 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
   void _submitEntry() async {
     User? user = FirebaseAuth.instance.currentUser;
 
-    // Sign in anonymously if not already signed in
     if (user == null) {
       try {
         final credential = await FirebaseAuth.instance.signInAnonymously();
         user = credential.user;
-        print('Signed in anonymously as: ${user?.uid}');
       } catch (e) {
-        print('Anonymous sign-in failed: $e');
         return;
       }
     }
@@ -41,10 +38,8 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Symptom logged!')),
         );
-      } catch (e) {
-        print('Failed to log symptom: $e');
-      }
-      _descController.clear();
+        _descController.clear();
+      } catch (_) {}
     }
   }
 
@@ -63,11 +58,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
               max: 5,
               divisions: 4,
               label: _severity.toString(),
-              onChanged: (value) {
-                setState(() {
-                  _severity = value.toInt();
-                });
-              },
+              onChanged: (value) => setState(() => _severity = value.toInt()),
             ),
             TextField(
               controller: _descController,
