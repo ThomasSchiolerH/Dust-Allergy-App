@@ -16,15 +16,34 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
   void _submitEntry() async {
-    final user = FirebaseAuth.instance.currentUser;
+    User? user = FirebaseAuth.instance.currentUser;
+
+    // Sign in anonymously if not already signed in
+    if (user == null) {
+      try {
+        final credential = await FirebaseAuth.instance.signInAnonymously();
+        user = credential.user;
+        print('Signed in anonymously as: ${user?.uid}');
+      } catch (e) {
+        print('Anonymous sign-in failed: $e');
+        return;
+      }
+    }
+
     if (user != null) {
       final entry = SymptomEntry(
         date: DateTime.now(),
         severity: _severity,
         description: _descController.text,
       );
-      await _firestoreService.addSymptom(user.uid, entry);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Symptom logged!')));
+      try {
+        await _firestoreService.addSymptom(user.uid, entry);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Symptom logged!')),
+        );
+      } catch (e) {
+        print('Failed to log symptom: $e');
+      }
       _descController.clear();
     }
   }
