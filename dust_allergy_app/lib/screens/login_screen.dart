@@ -85,16 +85,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToApp() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const BottomNavWrapper()),
-    );
-  }
+  if (!mounted) return;
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (_) => const BottomNavWrapper()),
+  );
+}
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+}
 
   Widget _buildGoogleButton() {
     return ElevatedButton.icon(
