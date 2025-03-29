@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../screens/symptom_log_screen.dart';
 import '../screens/cleaning_log_screen.dart';
+import '../screens/dashboard_screen.dart';
 
 class BottomNavWrapper extends StatefulWidget {
   final int selectedIndex;
@@ -18,6 +19,7 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
   final List<Widget> _screens = [
     const SymptomLogScreen(),
     const CleaningLogScreen(),
+    const DashboardScreen(),
   ];
 
   @override
@@ -51,6 +53,10 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
           BottomNavigationBarItem(
             icon: Icon(Icons.cleaning_services),
             label: 'Cleaning',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
         ],
       ),
