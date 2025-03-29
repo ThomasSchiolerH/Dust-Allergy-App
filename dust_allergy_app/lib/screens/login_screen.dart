@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/bottom_nav_wrapper.dart';
+import '../services/firestore_service.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,24 +16,54 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void _registerWithEmail() async {
+  void _loginWithEmail() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please enter both email and password.');
+      return;
+    }
+
     try {
-      await _authService.registerWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+      final credential = await _authService.signInWithEmail(
+        email: email,
+        password: password,
       );
+
+      await FirestoreService().createUserProfile(
+        userId: credential.user!.uid,
+        email: credential.user!.email,
+        name: credential.user!.displayName,
+      );
+
       _navigateToApp();
     } catch (e) {
       _showError(e.toString());
     }
   }
 
-  void _loginWithEmail() async {
+  void _registerWithEmail() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Please enter both email and password.');
+      return;
+    }
+
     try {
-      await _authService.signInWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+      final credential = await _authService.registerWithEmail(
+        email: email,
+        password: password,
       );
+
+      await FirestoreService().createUserProfile(
+        userId: credential.user!.uid,
+        email: credential.user!.email,
+        name: credential.user!.displayName,
+      );
+
       _navigateToApp();
     } catch (e) {
       _showError(e.toString());
@@ -39,11 +71,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _loginWithGoogle() async {
-    try {
-      await _authService.signInWithGoogle();
+    final credential = await _authService.signInWithGoogle();
+    if (credential != null) {
+      await FirestoreService().createUserProfile(
+        userId: credential.user!.uid,
+        email: credential.user!.email,
+        name: credential.user!.displayName,
+      );
       _navigateToApp();
-    } catch (e) {
-      _showError(e.toString());
+    } else {
+      _showError('Google sign-in failed');
     }
   }
 
@@ -57,6 +94,31 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildGoogleButton() {
+    return ElevatedButton.icon(
+      icon: Image.asset(
+        'assets/images/google_icon.png',
+        height: 20,
+        width: 20,
+      ),
+      label: const Text(
+        'Sign in with Google',
+        style: TextStyle(color: Colors.black87),
+      ),
+      style: ElevatedButton.styleFrom(
+        elevation: 2,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        minimumSize: const Size(double.infinity, 48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Colors.grey),
+        ),
+      ),
+      onPressed: _loginWithGoogle,
+    );
   }
 
   @override
@@ -79,29 +141,33 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loginWithEmail,
-              child: const Text('Login with Email'),
-            ),
-            Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+              style: ElevatedButton.styleFrom(
+                elevation: 2,
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
               ),
-              child: IconButton(
-                iconSize: 40,
-                icon: Image.asset('assets/images/google_icon.png'),
-                onPressed: () async {
-                  final credential = await _authService.signInWithGoogle();
-                  if (credential != null) {
-                    _navigateToApp();
-                  } else {
-                    _showError('Google sign-in failed');
-                  }
-                },
+              child: const Text(
+                'Login with Email',
+                style: TextStyle(fontSize: 16),
               ),
             ),
-            ElevatedButton(
-              onPressed: _registerWithEmail,
-              child: const Text('Register with Email'),
+            const SizedBox(height: 16),
+            _buildGoogleButton(),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SignupScreen()),
+                );
+              },
+              child: const Text(
+                "Don't have an account? Sign up",
+                style: TextStyle(color: Colors.blue),
+              ),
             ),
           ],
         ),

@@ -22,4 +22,24 @@ class FirestoreService {
         .add(entry.toMap());
   }
 
+  Future<void> createUserProfile({
+    required String userId,
+    required String? email,
+    required String? name,
+  }) async {
+    final userDoc = _db.collection('users').doc(userId);
+
+    final docSnapshot = await userDoc.get();
+    if (!docSnapshot.exists) {
+      await userDoc.set({
+        'profile': {
+          'name': name ?? '',
+          'email': email ?? '',
+          'allergySeverity': '',
+          'otherPreferences': {},
+        },
+      });
+    }
+  }
+
 }
