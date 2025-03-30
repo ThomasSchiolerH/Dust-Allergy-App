@@ -1,5 +1,5 @@
-// widgets/bottom_nav_wrapper.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/symptom_log_screen.dart';
 import '../screens/cleaning_log_screen.dart';
 import '../screens/dashboard_screen.dart';
@@ -16,10 +16,19 @@ class BottomNavWrapper extends StatefulWidget {
 class _BottomNavWrapperState extends State<BottomNavWrapper> {
   late int _currentIndex;
 
-  final List<Widget> _screens = [
-    const SymptomLogScreen(),
-    const CleaningLogScreen(),
-    const DashboardScreen(),
+  final List<Map<String, dynamic>> _tabs = [
+    {
+      'title': 'Symptom Log',
+      'screen': const SymptomLogScreen(),
+    },
+    {
+      'title': 'Cleaning Log',
+      'screen': const CleaningLogScreen(),
+    },
+    {
+      'title': 'Dashboard',
+      'screen': const DashboardScreen(),
+    },
   ];
 
   @override
@@ -38,10 +47,33 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
     );
   }
 
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tab = _tabs[_currentIndex];
+
     return Scaffold(
-      body: _screens[_currentIndex],
+      appBar: AppBar(
+        title: Text(tab['title']),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') _logout();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'logout',
+                child: Text('Logout'),
+              ),
+            ],
+            icon: const Icon(Icons.more_vert),
+          ),
+        ],
+      ),
+      body: tab['screen'],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
