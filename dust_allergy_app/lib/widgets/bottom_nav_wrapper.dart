@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/symptom_log_screen.dart';
 import '../screens/cleaning_log_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../widgets/auth_gate.dart';
 
 class BottomNavWrapper extends StatefulWidget {
   final int selectedIndex;
@@ -49,6 +50,14 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+      (route) => false,
+    );
   }
 
   @override
