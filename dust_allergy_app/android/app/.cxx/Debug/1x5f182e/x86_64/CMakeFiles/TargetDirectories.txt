@@ -1,0 +1,2 @@
+/Users/thomasschioler/Documents/DTU/Master/Personal Wearables/Dust-Allergy-App/dust_allergy_app/android/app/.cxx/Debug/1x5f182e/x86_64/CMakeFiles/edit_cache.dir
+/Users/thomasschioler/Documents/DTU/Master/Personal Wearables/Dust-Allergy-App/dust_allergy_app/android/app/.cxx/Debug/1x5f182e/x86_64/CMakeFiles/rebuild_cache.dir

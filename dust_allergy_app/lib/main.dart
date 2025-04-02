@@ -11,7 +11,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  //await FirebaseAuth.instance.signOut(); // <-- TEMPORARY RESET
+  await FirebaseAuth.instance.signOut(); // <-- TEMPORARY RESET
   runApp(const MyApp());
 }
 
@@ -43,6 +43,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
+          debugPrint('User logged in: ${snapshot.data?.email}');
           return const BottomNavWrapper();
         } else {
           return const LoginScreen();
