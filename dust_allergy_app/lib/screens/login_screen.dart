@@ -16,6 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
   String? _unverifiedEmail;
   User? _unverifiedUser;
@@ -25,9 +27,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _showError('Please enter both email and password.');
+      _showMessage('Please enter both email and password.');
       return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final credential = await _authService.signInWithEmail(
@@ -41,9 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _unverifiedEmail = credential.user!.email;
           _unverifiedUser = credential.user;
+          _isLoading = false;
         });
 
-        _showError('Please verify your email before logging in.');
+        _showMessage('Please verify your email before logging in.');
         return;
       }
 
@@ -55,47 +62,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
       _navigateToApp();
     } on FirebaseAuthException catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
       if (e.code == 'user-not-found') {
-        _showError('No account found for that email.');
+        _showMessage('No account found for that email.');
       } else if (e.code == 'wrong-password') {
-        _showError('Incorrect password.');
+        _showMessage('Incorrect password.');
       } else {
-        _showError('Login failed: ${e.message}');
+        _showMessage('Login failed: ${e.message}');
       }
     } catch (e) {
-      _showError('An unexpected error occurred: $e');
-    }
-  }
-
-  void _registerWithEmail() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    if (email.isEmpty || password.isEmpty) {
-      _showError('Please enter both email and password.');
-      return;
-    }
-
-    try {
-      final credential = await _authService.registerWithEmail(
-        email: email,
-        password: password,
-      );
-
-      await FirestoreService().createUserProfile(
-        userId: credential.user!.uid,
-        email: credential.user!.email,
-        name: credential.user!.displayName,
-      );
-
-      _navigateToApp();
-    } catch (e) {
-      _showError(e.toString());
+      setState(() {
+        _isLoading = false;
+      });
+      _showMessage('An unexpected error occurred: $e');
     }
   }
 
   void _loginWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final credential = await _authService.signInWithGoogle();
+
     if (credential != null) {
       await FirestoreService().createUserProfile(
         userId: credential.user!.uid,
@@ -104,7 +96,10 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       _navigateToApp();
     } else {
-      _showError('Google sign-in failed');
+      setState(() {
+        _isLoading = false;
+      });
+      _showMessage('Google sign-in failed');
     }
   }
 
@@ -121,54 +116,62 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
 
     if (email.isEmpty) {
-      _showError('Please enter your email first.');
+      _showMessage('Please enter your email first.');
       return;
     }
 
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _showError('Password reset email sent to $email.');
+      _showMessage('Password reset email sent to $email.');
     } catch (e) {
-      _showError('Error sending reset email: $e');
+      _showMessage('Error sending reset email: $e');
     }
   }
 
   void _resendVerificationEmail() async {
     try {
       await _unverifiedUser?.sendEmailVerification();
-      _showError('Verification email resent to $_unverifiedEmail');
+      _showMessage('Verification email resent to $_unverifiedEmail');
     } catch (e) {
-      _showError('Error resending verification: $e');
+      _showMessage('Error resending verification: $e');
     }
   }
 
-  void _showError(String message) {
+  void _showMessage(String message) {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
     );
   }
 
   Widget _buildGoogleButton() {
-    return ElevatedButton.icon(
+    return OutlinedButton.icon(
       icon: Image.asset(
         'assets/images/google_icon.png',
         height: 20,
         width: 20,
       ),
       label: const Text(
-        'Sign in with Google',
-        style: TextStyle(color: Colors.black87),
+        'Continue with Google',
+        style: TextStyle(fontWeight: FontWeight.w500),
       ),
-      style: ElevatedButton.styleFrom(
-        elevation: 2,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        minimumSize: const Size(double.infinity, 48),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white30
+              : Colors.black12,
+          width: 1,
         ),
       ),
       onPressed: _loginWithGoogle,
@@ -177,66 +180,141 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loginWithEmail,
-              style: ElevatedButton.styleFrom(
-                elevation: 2,
-                backgroundColor: Colors.blue.shade600,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
+                  Icon(
+                    Icons.air_outlined,
+                    size: 60,
+                    color: primaryColor,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Dust Allergy Tracker',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Track your symptoms and cleaning habits',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _forgotPassword,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _loginWithEmail,
+                              child: const Text('Sign In'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildGoogleButton(),
+                          ],
+                        ),
+                  if (_unverifiedUser != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: TextButton(
+                        onPressed: _resendVerificationEmail,
+                        child: const Text('Resend Verification Email'),
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SignupScreen()),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Sign Up'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              child: const Text(
-                'Login with Email',
-                style: TextStyle(fontSize: 16),
-              ),
             ),
-            if (_unverifiedUser != null)
-              TextButton(
-                onPressed: _resendVerificationEmail,
-                child: const Text('Resend Verification Email',
-                    style: TextStyle(color: Colors.blue)),
-              ),
-            const SizedBox(height: 16),
-            _buildGoogleButton(),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SignupScreen()),
-                );
-              },
-              child: const Text(
-                "Don't have an account? Sign up",
-                style: TextStyle(color: Colors.blue),
-              ),
-            ),
-            TextButton(
-              onPressed: _forgotPassword,
-              child: const Text(
-                'Forgot password?',
-                style: TextStyle(color: Colors.blue),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
