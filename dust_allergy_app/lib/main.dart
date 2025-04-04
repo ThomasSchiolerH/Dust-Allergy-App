@@ -12,7 +12,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await FirebaseAuth.instance.signOut(); // <-- TEMPORARY RESET
+  // await FirebaseAuth.instance.signOut(); // <-- TEMPORARY RESET
   runApp(const MyApp());
 }
 

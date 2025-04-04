@@ -1,7 +1,7 @@
 class CleaningEntry {
   final DateTime date;
   final bool windowOpened;
-  final int windowDuration; // in minutes
+  final int windowDuration;
   final bool vacuumed;
   final bool floorWashed;
   final bool bedsheetsWashed;

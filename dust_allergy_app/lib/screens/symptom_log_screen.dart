@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
 import '../models/symptom_entry.dart';
+import 'package:intl/intl.dart';
+
 
 class SymptomLogScreen extends StatefulWidget {
   const SymptomLogScreen({super.key});
@@ -11,6 +13,11 @@ class SymptomLogScreen extends StatefulWidget {
 }
 
 class _SymptomLogScreenState extends State<SymptomLogScreen> {
+  DateTime _selectedDate = DateTime.now();
+  bool _congestion = false;
+  bool _itchingEyes = false;
+  bool _headache = false;
+
   int _severity = 1;
   final _descController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
@@ -29,9 +36,12 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
 
     if (user != null) {
       final entry = SymptomEntry(
-        date: DateTime.now(),
+        date: _selectedDate,
         severity: _severity,
         description: _descController.text,
+        congestion: _congestion,
+        itchingEyes: _itchingEyes,
+        headache: _headache,
       );
       try {
         await _firestoreService.addSymptom(user.uid, entry);
@@ -60,6 +70,51 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
               label: _severity.toString(),
               onChanged: (value) => setState(() => _severity = value.toInt()),
             ),
+            ListTile(
+              title: Text("Selected: ${_formatDateTime(_selectedDate)}"),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
+                );
+                if (pickedDate != null) {
+                  final pickedTime = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(_selectedDate),
+                  );
+                  if (pickedTime != null) {
+                    setState(() {
+                      _selectedDate = DateTime(
+                        pickedDate.year,
+                        pickedDate.month,
+                        pickedDate.day,
+                        pickedTime.hour,
+                        pickedTime.minute,
+                      );
+                    });
+                  }
+                }
+              },
+            ),
+
+            CheckboxListTile(
+              title: const Text('Congestion'),
+              value: _congestion,
+              onChanged: (val) => setState(() => _congestion = val ?? false),
+            ),
+            CheckboxListTile(
+              title: const Text('Itching Eyes'),
+              value: _itchingEyes,
+              onChanged: (val) => setState(() => _itchingEyes = val ?? false),
+            ),
+            CheckboxListTile(
+              title: const Text('Headache'),
+              value: _headache,
+              onChanged: (val) => setState(() => _headache = val ?? false),
+            ),
             TextField(
               controller: _descController,
               decoration: const InputDecoration(labelText: 'Optional notes'),
@@ -74,4 +129,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
       ),
     );
   }
+}
+String _formatDateTime(DateTime dateTime) {
+  return DateFormat('EEE, MMM d, y - h:mm a').format(dateTime);
 }

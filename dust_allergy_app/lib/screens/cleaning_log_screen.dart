@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
 import '../models/cleaning_entry.dart';
+import 'package:intl/intl.dart';
+
 
 class CleaningLogScreen extends StatefulWidget {
   const CleaningLogScreen({super.key});
+
 
   @override
   State<CleaningLogScreen> createState() => _CleaningLogScreenState();
@@ -12,7 +15,7 @@ class CleaningLogScreen extends StatefulWidget {
 
 class _CleaningLogScreenState extends State<CleaningLogScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-
+  DateTime _selectedDate = DateTime.now();
   bool _windowOpened = false;
   int _windowDuration = 0;
   bool _vacuumed = false;
@@ -34,7 +37,7 @@ class _CleaningLogScreenState extends State<CleaningLogScreen> {
 
     if (user != null) {
       final entry = CleaningEntry(
-        date: DateTime.now(),
+        date: _selectedDate,
         windowOpened: _windowOpened,
         windowDuration: _windowOpened ? _windowDuration : 0,
         vacuumed: _vacuumed,
@@ -65,9 +68,39 @@ class _CleaningLogScreenState extends State<CleaningLogScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Log Cleaning Activity')),
       body: SingleChildScrollView(
+
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            ListTile(
+              title: Text("Selected: ${_formatDateTime(_selectedDate)}"),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
+                );
+                if (pickedDate != null) {
+                  final pickedTime = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(_selectedDate),
+                  );
+                  if (pickedTime != null) {
+                    setState(() {
+                      _selectedDate = DateTime(
+                        pickedDate.year,
+                        pickedDate.month,
+                        pickedDate.day,
+                        pickedTime.hour,
+                        pickedTime.minute,
+                      );
+                    });
+                  }
+                }
+              },
+            ),
             SwitchListTile(
               title: const Text('Opened window for fresh air?'),
               value: _windowOpened,
@@ -113,4 +146,8 @@ class _CleaningLogScreenState extends State<CleaningLogScreen> {
       ),
     );
   }
+}
+
+String _formatDateTime(DateTime dateTime) {
+  return DateFormat('EEE, MMM d, y - h:mm a').format(dateTime);
 }
