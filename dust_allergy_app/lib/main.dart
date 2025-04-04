@@ -6,9 +6,15 @@ import 'services/firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'widgets/bottom_nav_wrapper.dart';
 import 'widgets/auth_gate.dart';
+import 'services/notification_service.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
+  await NotificationService.init();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );

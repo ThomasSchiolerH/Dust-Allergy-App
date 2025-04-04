@@ -3,6 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
 import '../models/symptom_entry.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../services/notification_service.dart';
+TimeOfDay? _reminderTime;
 
 
 class SymptomLogScreen extends StatefulWidget {
@@ -120,6 +123,39 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
               decoration: const InputDecoration(labelText: 'Optional notes'),
             ),
             const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final pickedTime = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.now(),
+                );
+
+                if (pickedTime != null) {
+                  setState(() => _reminderTime = pickedTime);
+
+                  final now = DateTime.now();
+                  final scheduled = DateTime(
+                    now.year,
+                    now.month,
+                    now.day,
+                    pickedTime.hour,
+                    pickedTime.minute,
+                  );
+
+                  await NotificationService.scheduleDailyReminder(
+                    id: 1,
+                    title: 'Allergy Tracker',
+                    body: 'Don’t forget to log today’s symptoms.',
+                    scheduledTime: scheduled,
+                  );
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Reminder set for ${pickedTime.format(context)}')),
+                  );
+                }
+              },
+              child: const Text('Set Daily Reminder'),
+            ),
             ElevatedButton(
               onPressed: _submitEntry,
               child: const Text('Save Entry'),
