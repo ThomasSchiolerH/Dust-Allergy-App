@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../widgets/bottom_nav_wrapper.dart';
 import '../services/firestore_service.dart';
 import 'signup_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  String? _unverifiedEmail;
+  User? _unverifiedUser;
 
   void _loginWithEmail() async {
     final email = _emailController.text.trim();
@@ -31,6 +35,18 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
+      if (!credential.user!.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+
+        setState(() {
+          _unverifiedEmail = credential.user!.email;
+          _unverifiedUser = credential.user;
+        });
+
+        _showError('Please verify your email before logging in.');
+        return;
+      }
+
       await FirestoreService().createUserProfile(
         userId: credential.user!.uid,
         email: credential.user!.email,
@@ -38,8 +54,16 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       _navigateToApp();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        _showError('No account found for that email.');
+      } else if (e.code == 'wrong-password') {
+        _showError('Incorrect password.');
+      } else {
+        _showError('Login failed: ${e.message}');
+      }
     } catch (e) {
-      _showError(e.toString());
+      _showError('An unexpected error occurred: $e');
     }
   }
 
@@ -85,21 +109,46 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToApp() {
-  if (!mounted) return;
+    if (!mounted) return;
 
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => const BottomNavWrapper()),
-  );
-}
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const BottomNavWrapper()),
+    );
+  }
+
+  void _forgotPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _showError('Please enter your email first.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showError('Password reset email sent to $email.');
+    } catch (e) {
+      _showError('Error sending reset email: $e');
+    }
+  }
+
+  void _resendVerificationEmail() async {
+    try {
+      await _unverifiedUser?.sendEmailVerification();
+      _showError('Verification email resent to $_unverifiedEmail');
+    } catch (e) {
+      _showError('Error resending verification: $e');
+    }
+  }
 
   void _showError(String message) {
-  if (!mounted) return;
+    if (!mounted) return;
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
-}
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   Widget _buildGoogleButton() {
     return ElevatedButton.icon(
@@ -160,6 +209,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 16),
               ),
             ),
+            if (_unverifiedUser != null)
+              TextButton(
+                onPressed: _resendVerificationEmail,
+                child: const Text('Resend Verification Email',
+                    style: TextStyle(color: Colors.blue)),
+              ),
             const SizedBox(height: 16),
             _buildGoogleButton(),
             TextButton(
@@ -171,6 +226,13 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: const Text(
                 "Don't have an account? Sign up",
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+            TextButton(
+              onPressed: _forgotPassword,
+              child: const Text(
+                'Forgot password?',
                 style: TextStyle(color: Colors.blue),
               ),
             ),

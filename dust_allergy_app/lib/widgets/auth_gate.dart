@@ -17,11 +17,13 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        if (snapshot.hasData) {
+        final user = snapshot.data;
+
+        if (user != null && user.emailVerified) {
           return const BottomNavWrapper();
-        } else {
-          return const LoginScreen();
         }
+
+        return const LoginScreen();
       },
     );
   }
