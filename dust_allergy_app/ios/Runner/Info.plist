@@ -63,5 +63,7 @@
 		</array>
 	</dict>
 	</array>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to save exported files.</string>
 </dict>
 </plist>

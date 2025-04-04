@@ -4,6 +4,7 @@ import '../screens/symptom_log_screen.dart';
 import '../screens/cleaning_log_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../widgets/auth_gate.dart';
+import '../screens/privacy_policy_screen.dart';
 
 class BottomNavWrapper extends StatefulWidget {
   final int selectedIndex;
@@ -70,16 +71,28 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'logout') _logout();
+              if (value == 'logout') {
+                _logout();
+              } else if (value == 'privacy') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const PrivacyPolicyScreen()),
+                );
+              }
             },
             itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'privacy',
+                child: Text('Privacy Policy'),
+              ),
               PopupMenuItem(
                 value: 'logout',
                 child: Text('Logout'),
               ),
             ],
             icon: const Icon(Icons.more_vert),
-          ),
+          )
         ],
       ),
       body: tab['screen'],
