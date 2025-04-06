@@ -114,16 +114,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<FlSpot> _buildSymptomSpots() {
-    return _symptomEntries.asMap().entries.map((entry) {
+    // Get filtered entries based on selected timeframe
+    List<SymptomEntry> filteredEntries = _getFilteredSymptomEntries();
+
+    return filteredEntries.asMap().entries.map((entry) {
       return FlSpot(entry.key.toDouble(), entry.value.severity.toDouble());
     }).toList();
   }
 
   List<VerticalLine> _buildCleaningMarkers() {
+    // Get filtered entries based on selected timeframe
+    List<SymptomEntry> filteredEntries = _getFilteredSymptomEntries();
+
+    // Filter cleaning entries to match the selected timeframe
+    final now = DateTime.now();
+    List<CleaningEntry> filteredCleaningEntries;
+
+    switch (_selectedTimeframe) {
+      case 'Last 7 days':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 7))))
+            .toList();
+        break;
+      case 'Last 30 days':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 30))))
+            .toList();
+        break;
+      case 'Last 3 months':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 90))))
+            .toList();
+        break;
+      case 'All time':
+      default:
+        filteredCleaningEntries = List.from(_cleaningEntries);
+    }
+
     List<VerticalLine> markers = [];
-    for (int i = 0; i < _symptomEntries.length; i++) {
-      final date = _symptomEntries[i].date;
-      final hadCleaning = _cleaningEntries.any((c) =>
+    for (int i = 0; i < filteredEntries.length; i++) {
+      final date = filteredEntries[i].date;
+      final hadCleaning = filteredCleaningEntries.any((c) =>
           c.date.year == date.year &&
           c.date.month == date.month &&
           c.date.day == date.day);
@@ -252,13 +286,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'No Clothes on Floor': 0.0,
     };
 
+    // Get filtered entries based on selected timeframe
+    List<SymptomEntry> filteredEntries = _getFilteredSymptomEntries();
+    if (filteredEntries.isEmpty) return;
+
+    // Filter cleaning entries to match the selected timeframe
+    final now = DateTime.now();
+    List<CleaningEntry> filteredCleaningEntries;
+
+    switch (_selectedTimeframe) {
+      case 'Last 7 days':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 7))))
+            .toList();
+        break;
+      case 'Last 30 days':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 30))))
+            .toList();
+        break;
+      case 'Last 3 months':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 90))))
+            .toList();
+        break;
+      case 'All time':
+      default:
+        filteredCleaningEntries = List.from(_cleaningEntries);
+    }
+
+    if (filteredCleaningEntries.isEmpty) return;
+
     // Find severity changes after cleaning events
-    for (var cleanEntry in _cleaningEntries) {
+    for (var cleanEntry in filteredCleaningEntries) {
       // Find symptoms before and after this cleaning
-      var beforeCleaning = _symptomEntries
+      var beforeCleaning = filteredEntries
           .where((s) => s.date.isBefore(cleanEntry.date))
           .toList();
-      var afterCleaning = _symptomEntries
+      var afterCleaning = filteredEntries
           .where((s) =>
               s.date.isAfter(cleanEntry.date) &&
               s.date.difference(cleanEntry.date).inDays <= 3)
@@ -310,7 +378,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Night': 0
     };
 
-    for (var entry in _symptomEntries) {
+    // Get filtered entries based on selected timeframe
+    List<SymptomEntry> filteredEntries = _getFilteredSymptomEntries();
+
+    for (var entry in filteredEntries) {
       int hour = entry.date.hour;
 
       if (hour >= 5 && hour < 12) {
@@ -559,8 +630,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
+                      final filteredEntries = _getFilteredSymptomEntries();
                       if (index < 0 ||
-                          index >= _symptomEntries.length ||
+                          index >= filteredEntries.length ||
                           index % 5 != 0) {
                         return const SizedBox.shrink();
                       }
@@ -568,7 +640,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         padding: const EdgeInsets.only(top: 5),
                         child: Text(
                           DateFormat('MMM d')
-                              .format(_symptomEntries[index].date),
+                              .format(filteredEntries[index].date),
                           style: const TextStyle(fontSize: 10),
                         ),
                       );
@@ -614,13 +686,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    if (_cleaningEntries.isEmpty) {
+    // Filter cleaning entries based on selected timeframe
+    final now = DateTime.now();
+    List<CleaningEntry> filteredCleaningEntries;
+
+    switch (_selectedTimeframe) {
+      case 'Last 7 days':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 7))))
+            .toList();
+        break;
+      case 'Last 30 days':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 30))))
+            .toList();
+        break;
+      case 'Last 3 months':
+        filteredCleaningEntries = _cleaningEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 90))))
+            .toList();
+        break;
+      case 'All time':
+      default:
+        filteredCleaningEntries = List.from(_cleaningEntries);
+    }
+
+    if (filteredCleaningEntries.isEmpty) {
       return Card(
         elevation: 0,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'No cleaning events recorded yet',
+            'No cleaning events recorded in the selected timeframe',
             style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
           ),
         ),
@@ -635,7 +735,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
-          children: _cleaningEntries.reversed
+          children: filteredCleaningEntries.reversed
               .take(5)
               .map((entry) => ListTile(
                     leading: Container(
