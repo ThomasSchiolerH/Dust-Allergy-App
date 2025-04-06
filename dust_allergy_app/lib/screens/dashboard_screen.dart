@@ -6,6 +6,7 @@ import '../models/symptom_entry.dart';
 import '../models/cleaning_entry.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';
+import 'dart:collection';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,6 +20,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<CleaningEntry> _cleaningEntries = [];
   List<String> _recommendations = [];
   bool _isLoading = true;
+
+  // Data analysis fields
+  Map<String, List<double>> _symptomTypeTrends = {};
+  Map<String, double> _cleaningImpactScores = {};
+  Map<String, int> _timeOfDaySymptomCounts = {
+    'Morning': 0,
+    'Afternoon': 0,
+    'Evening': 0,
+    'Night': 0
+  };
+  String _selectedTimeframe = 'Last 30 days';
+
+  // Filter options
+  final List<String> _timeframeOptions = [
+    'Last 7 days',
+    'Last 30 days',
+    'Last 3 months',
+    'All time'
+  ];
 
   @override
   void initState() {
@@ -60,6 +80,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           date: (data['date'] as Timestamp).toDate(),
           severity: data['severity'],
           description: data['description'],
+          congestion: data['congestion'] ?? false,
+          itchingEyes: data['itchingEyes'] ?? false,
+          headache: data['headache'] ?? false,
         );
       }).toList();
 
@@ -77,6 +100,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }).toList();
 
       _generateRecommendations();
+      _analyzeSymptomTrends();
+      _analyzeCleaningImpact();
+      _analyzeTimeOfDayPatterns();
       _isLoading = false;
     });
   }
@@ -134,6 +160,145 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Analyze symptoms data to identify trends by symptom type
+  void _analyzeSymptomTrends() {
+    if (_symptomEntries.isEmpty) return;
+
+    // Initialize symptom type tracking
+    _symptomTypeTrends = {
+      'Overall Severity': [],
+      'Congestion': [],
+      'Itching Eyes': [],
+      'Headache': [],
+    };
+
+    // Get filtered entries based on selected timeframe
+    List<SymptomEntry> filteredEntries = _getFilteredSymptomEntries();
+
+    // Collect trends over time
+    for (var entry in filteredEntries) {
+      _symptomTypeTrends['Overall Severity']!.add(entry.severity.toDouble());
+      _symptomTypeTrends['Congestion']!.add(entry.congestion ? 1.0 : 0.0);
+      _symptomTypeTrends['Itching Eyes']!.add(entry.itchingEyes ? 1.0 : 0.0);
+      _symptomTypeTrends['Headache']!.add(entry.headache ? 1.0 : 0.0);
+    }
+  }
+
+  // Analyze cleaning impact on symptom severity
+  void _analyzeCleaningImpact() {
+    if (_symptomEntries.isEmpty || _cleaningEntries.isEmpty) return;
+
+    _cleaningImpactScores = {
+      'Vacuuming': 0.0,
+      'Floor Washing': 0.0,
+      'Bedsheets': 0.0,
+      'Windows Opened': 0.0,
+      'No Clothes on Floor': 0.0,
+    };
+
+    // Find severity changes after cleaning events
+    for (var cleanEntry in _cleaningEntries) {
+      // Find symptoms before and after this cleaning
+      var beforeCleaning = _symptomEntries
+          .where((s) => s.date.isBefore(cleanEntry.date))
+          .toList();
+      var afterCleaning = _symptomEntries
+          .where((s) =>
+              s.date.isAfter(cleanEntry.date) &&
+              s.date.difference(cleanEntry.date).inDays <= 3)
+          .toList();
+
+      if (beforeCleaning.isEmpty || afterCleaning.isEmpty) continue;
+
+      // Calculate avg severity before and after
+      double beforeAvg =
+          beforeCleaning.map((e) => e.severity).reduce((a, b) => a + b) /
+              beforeCleaning.length;
+      double afterAvg =
+          afterCleaning.map((e) => e.severity).reduce((a, b) => a + b) /
+              afterCleaning.length;
+
+      // Impact is the reduction in symptom severity
+      double impact = max(0, beforeAvg - afterAvg);
+
+      // Attribute impact to specific cleaning activities
+      if (cleanEntry.vacuumed) {
+        _cleaningImpactScores['Vacuuming'] =
+            (_cleaningImpactScores['Vacuuming']! + impact) / 2;
+      }
+      if (cleanEntry.floorWashed) {
+        _cleaningImpactScores['Floor Washing'] =
+            (_cleaningImpactScores['Floor Washing']! + impact) / 2;
+      }
+      if (cleanEntry.bedsheetsWashed) {
+        _cleaningImpactScores['Bedsheets'] =
+            (_cleaningImpactScores['Bedsheets']! + impact) / 2;
+      }
+      if (cleanEntry.windowOpened) {
+        _cleaningImpactScores['Windows Opened'] =
+            (_cleaningImpactScores['Windows Opened']! + impact) / 2;
+      }
+      if (!cleanEntry.clothesOnFloor) {
+        _cleaningImpactScores['No Clothes on Floor'] =
+            (_cleaningImpactScores['No Clothes on Floor']! + impact) / 2;
+      }
+    }
+  }
+
+  // Analyze the time of day patterns in symptoms
+  void _analyzeTimeOfDayPatterns() {
+    _timeOfDaySymptomCounts = {
+      'Morning': 0,
+      'Afternoon': 0,
+      'Evening': 0,
+      'Night': 0
+    };
+
+    for (var entry in _symptomEntries) {
+      int hour = entry.date.hour;
+
+      if (hour >= 5 && hour < 12) {
+        _timeOfDaySymptomCounts['Morning'] =
+            _timeOfDaySymptomCounts['Morning']! + 1;
+      } else if (hour >= 12 && hour < 17) {
+        _timeOfDaySymptomCounts['Afternoon'] =
+            _timeOfDaySymptomCounts['Afternoon']! + 1;
+      } else if (hour >= 17 && hour < 22) {
+        _timeOfDaySymptomCounts['Evening'] =
+            _timeOfDaySymptomCounts['Evening']! + 1;
+      } else {
+        _timeOfDaySymptomCounts['Night'] =
+            _timeOfDaySymptomCounts['Night']! + 1;
+      }
+    }
+  }
+
+  // Helper to filter symptom entries based on selected timeframe
+  List<SymptomEntry> _getFilteredSymptomEntries() {
+    final now = DateTime.now();
+
+    switch (_selectedTimeframe) {
+      case 'Last 7 days':
+        return _symptomEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 7))))
+            .toList();
+      case 'Last 30 days':
+        return _symptomEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 30))))
+            .toList();
+      case 'Last 3 months':
+        return _symptomEntries
+            .where((entry) =>
+                entry.date.isAfter(now.subtract(const Duration(days: 90))))
+            .toList();
+      case 'All time':
+      default:
+        return List.from(_symptomEntries);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -142,48 +307,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _symptomEntries.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverAppBar(
-                        expandedHeight: 120,
-                        pinned: true,
-                        flexibleSpace: FlexibleSpaceBar(
-                          title: const Text('Insights'),
-                          background: Container(
-                            color: isDark
-                                ? theme.cardColor
-                                : theme.primaryColor.withOpacity(0.05),
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              child: _symptomEntries.isEmpty
+                  ? Stack(
+                      children: [
+                        _buildEmptyState(),
+                        ListView(), // This allows the refresh indicator to work with an empty view
+                      ],
+                    )
+                  : CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverAppBar(
+                          expandedHeight: 120,
+                          pinned: true,
+                          flexibleSpace: FlexibleSpaceBar(
+                            title: const Text('Insights'),
+                            background: Container(
+                              color: isDark
+                                  ? theme.cardColor
+                                  : theme.primaryColor.withOpacity(0.05),
+                            ),
                           ),
                         ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionHeader(
-                                  context, 'Symptom Severity Over Time'),
-                              _buildChartCard(),
-                              const SizedBox(height: 24),
-                              _buildSectionHeader(
-                                  context, 'Recent Cleaning Events'),
-                              _buildCleaningEventsList(),
-                              const SizedBox(height: 24),
-                              _buildSectionHeader(context, 'Recommendations'),
-                              _buildRecommendationsList(),
-                            ],
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTimeframeSelector(),
+                                const SizedBox(height: 16),
+                                _buildSectionHeader(
+                                    context, 'Symptom Severity Over Time'),
+                                _buildChartCard(),
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(
+                                    context, 'Symptom Analysis'),
+                                _buildSymptomTypesChart(),
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(context, 'Cleaning Impact'),
+                                _buildCleaningImpactChart(),
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(
+                                    context, 'Time of Day Patterns'),
+                                _buildTimeOfDayChart(),
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(
+                                    context, 'Recent Cleaning Events'),
+                                _buildCleaningEventsList(),
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(context, 'Recommendations'),
+                                _buildRecommendationsList(),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
+                      ],
+                    ),
+            ),
     );
   }
 
@@ -215,10 +398,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _loadData,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Refresh'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _loadData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+              ),
+            ],
           ),
         ],
       ),
@@ -253,11 +441,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
           height: 220,
           child: LineChart(
             LineChartData(
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      final date = _symptomEntries[spot.x.toInt()].date;
+                      final formattedDate =
+                          DateFormat('MMM d, yyyy').format(date);
+                      return LineTooltipItem(
+                        '${formattedDate}\nSeverity: ${spot.y.toInt()}',
+                        TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+                handleBuiltInTouches: true,
+              ),
               lineBarsData: [
                 LineChartBarData(
                   spots: _buildSymptomSpots(),
                   isCurved: true,
-                  dotData: FlDotData(show: true),
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barData, index) {
+                      return FlDotCirclePainter(
+                        radius: 4,
+                        color: Theme.of(context).colorScheme.primary,
+                        strokeWidth: 2,
+                        strokeColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.white,
+                      );
+                    },
+                  ),
                   color: Theme.of(context).colorScheme.primary,
                   barWidth: 3,
                   belowBarData: BarAreaData(
@@ -467,5 +688,489 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (entry.clothesOnFloor) activities.add("Clothes on Floor");
 
     return activities.join(" • ");
+  }
+
+  // Widget for selecting the data timeframe
+  Widget _buildTimeframeSelector() {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Data Timeframe:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black87,
+              ),
+            ),
+            DropdownButton<String>(
+              value: _selectedTimeframe,
+              underline: const SizedBox(),
+              items: _timeframeOptions.map((String option) {
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(option),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedTimeframe = newValue;
+                    _analyzeSymptomTrends();
+                    _analyzeCleaningImpact();
+                    _analyzeTimeOfDayPatterns();
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget for visualizing different symptom types over time
+  Widget _buildSymptomTypesChart() {
+    if (_symptomTypeTrends.isEmpty ||
+        _symptomTypeTrends['Overall Severity']!.isEmpty) {
+      return Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Text(
+              'Not enough data to show symptom type patterns',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Extract unique symptom types and create data for radar chart
+    List<String> symptomTypes = ['Congestion', 'Itching Eyes', 'Headache'];
+    Map<String, double> symptomTypeAverages = {};
+
+    // Calculate averages for each symptom type
+    for (String type in symptomTypes) {
+      if (_symptomTypeTrends[type] != null &&
+          _symptomTypeTrends[type]!.isNotEmpty) {
+        double sum = _symptomTypeTrends[type]!.reduce((a, b) => a + b);
+        symptomTypeAverages[type] = sum / _symptomTypeTrends[type]!.length;
+      } else {
+        symptomTypeAverages[type] = 0.0;
+      }
+    }
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Symptom Type Distribution',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 180,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 1.0,
+                  barTouchData: BarTouchData(enabled: false),
+                  titlesData: FlTitlesData(
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          int index = value.toInt();
+                          if (index < 0 || index >= symptomTypes.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              symptomTypes[index],
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value != 0 && value != 0.5 && value != 1.0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Text(
+                            '${(value * 100).toInt()}%',
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.black.withOpacity(0.05),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  barGroups: List.generate(
+                    symptomTypes.length,
+                    (index) => BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: symptomTypeAverages[symptomTypes[index]] ?? 0,
+                          color: _getSymptomTypeColor(symptomTypes[index]),
+                          width: 25,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'This chart shows how often each symptom type occurs.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper to get color for different symptom types
+  Color _getSymptomTypeColor(String symptomType) {
+    final theme = Theme.of(context);
+
+    switch (symptomType) {
+      case 'Congestion':
+        return Colors.blue;
+      case 'Itching Eyes':
+        return Colors.amber;
+      case 'Headache':
+        return Colors.red;
+      default:
+        return theme.colorScheme.primary;
+    }
+  }
+
+  // Widget for visualizing the impact of different cleaning activities
+  Widget _buildCleaningImpactChart() {
+    if (_cleaningImpactScores.isEmpty) {
+      return Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Text(
+              'Not enough data to analyze cleaning impact',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Sort activities by impact
+    List<MapEntry<String, double>> sortedImpacts = _cleaningImpactScores.entries
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Most Effective Cleaning Activities',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxHeight: 200,
+              ),
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: sortedImpacts.length,
+                itemBuilder: (context, index) {
+                  final activity = sortedImpacts[index].key;
+                  final impact = sortedImpacts[index].value;
+
+                  // Normalize to percentage (0-100%)
+                  final normalizedImpact = (impact /
+                          (sortedImpacts.first.value > 0
+                              ? sortedImpacts.first.value
+                              : 1)) *
+                      100;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              activity,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${normalizedImpact.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: normalizedImpact > 50
+                                    ? Colors.green
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: normalizedImpact / 100,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            normalizedImpact > 50
+                                ? Colors.green
+                                : Theme.of(context).colorScheme.primary,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Based on improvement in symptoms after cleaning activities.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget for visualizing symptom patterns by time of day
+  Widget _buildTimeOfDayChart() {
+    final timeOfDayMap = _timeOfDaySymptomCounts;
+
+    if (timeOfDayMap.values.every((value) => value == 0)) {
+      return Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Text(
+              'Not enough data for time of day analysis',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Calculate percentages for pie chart
+    final total = timeOfDayMap.values.reduce((a, b) => a + b);
+    final List<PieChartSectionData> sections = [];
+
+    final Map<String, Color> timeColors = {
+      'Morning': Colors.yellow.shade700,
+      'Afternoon': Colors.orange,
+      'Evening': Colors.deepPurple,
+      'Night': Colors.indigo,
+    };
+
+    timeOfDayMap.forEach((time, count) {
+      if (count > 0) {
+        final percentage = (count / total) * 100;
+        sections.add(
+          PieChartSectionData(
+            value: percentage,
+            title: '${percentage.toStringAsFixed(0)}%',
+            radius: 50,
+            titleStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            color: timeColors[time] ?? Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+    });
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'When Are Your Symptoms Worst?',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: PieChart(
+                      PieChartData(
+                        sections: sections,
+                        centerSpaceRadius: 30,
+                        sectionsSpace: 2,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: timeOfDayMap.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: timeColors[entry.key],
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${entry.key}: ${entry.value}',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Track time patterns to identify environmental triggers.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
