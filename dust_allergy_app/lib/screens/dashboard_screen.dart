@@ -7,6 +7,8 @@ import '../models/cleaning_entry.dart';
 import 'dart:math';
 import 'package:intl/intl.dart';
 import 'dart:collection';
+import '../services/ai_service.dart';
+import '../screens/ai_chat_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,8 +20,9 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<SymptomEntry> _symptomEntries = [];
   List<CleaningEntry> _cleaningEntries = [];
-  List<String> _recommendations = [];
+  List<Map<String, dynamic>> _recommendations = [];
   bool _isLoading = true;
+  bool _isLoadingAI = false;
 
   // Data analysis fields
   Map<String, List<double>> _symptomTypeTrends = {};
@@ -105,6 +108,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _analyzeTimeOfDayPatterns();
       _isLoading = false;
     });
+
+    // Load AI recommendations if available
+    _loadAIRecommendations();
   }
 
   List<FlSpot> _buildSymptomSpots() {
@@ -148,16 +154,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _recommendations.clear();
 
     if (daysSinceLastClean >= 3 && avgSeverity >= 3) {
-      _recommendations
-          .add("Try cleaning every 2–3 days to reduce symptom spikes.");
+      _recommendations.add({
+        'content': "Try cleaning every 2–3 days to reduce symptom spikes.",
+        'isAI': false
+      });
     }
     if (_cleaningEntries.last.vacuumed == false) {
-      _recommendations.add("Vacuuming may help improve symptoms.");
+      _recommendations.add(
+          {'content': "Vacuuming may help improve symptoms.", 'isAI': false});
     }
     if (_cleaningEntries.last.windowOpened == false) {
-      _recommendations.add(
-          "Try opening windows briefly to circulate air (if weather allows).");
+      _recommendations.add({
+        'content':
+            "Try opening windows briefly to circulate air (if weather allows).",
+        'isAI': false
+      });
     }
+  }
+
+  // Load AI-powered recommendations
+  Future<void> _loadAIRecommendations() async {
+    if (_symptomEntries.isEmpty || _cleaningEntries.isEmpty) return;
+
+    setState(() {
+      _isLoadingAI = true;
+    });
+
+    try {
+      // Import the AIService
+      final aiRecommendations = await AIService.generateRecommendations(
+        symptoms: _symptomEntries,
+        cleaning: _cleaningEntries,
+      );
+
+      setState(() {
+        // Add AI recommendations to the existing ones
+        _recommendations = [
+          ..._recommendations.where((rec) => rec['isAI'] == false),
+          ...aiRecommendations
+        ];
+        _isLoadingAI = false;
+      });
+    } catch (e) {
+      print('Error loading AI recommendations: $e');
+      setState(() {
+        _isLoadingAI = false;
+      });
+    }
+  }
+
+  // Navigate to AI chat screen
+  void _navigateToAIChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AIChatScreen(
+          symptoms: _symptomEntries,
+          cleaning: _cleaningEntries,
+        ),
+      ),
+    );
   }
 
   // Analyze symptoms data to identify trends by symptom type
@@ -359,7 +415,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 _buildCleaningEventsList(),
                                 const SizedBox(height: 24),
                                 _buildSectionHeader(context, 'Recommendations'),
-                                _buildRecommendationsList(),
+                                _buildRecommendationsSection(),
                               ],
                             ),
                           ),
@@ -619,62 +675,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRecommendationsList() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+  Widget _buildRecommendationsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recommendations',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            Row(
+              children: [
+                if (_isLoadingAI)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.refresh_outlined, size: 18),
+                    onPressed: _loadAIRecommendations,
+                    tooltip: 'Get AI Recommendations',
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.chat_outlined, size: 18),
+                  onPressed: _navigateToAIChat,
+                  tooltip: 'Chat with AI',
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_recommendations.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'No recommendations available yet. Try logging more data.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Show basic recommendations first
+              ..._buildRecommendationsByType(false),
 
-    if (_recommendations.isEmpty) {
+              // Show AI recommendations with header if they exist
+              if (_recommendations.any((rec) => rec['isAI'] == true)) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.smart_toy_outlined,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'AI Recommendations',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ..._buildRecommendationsByType(true),
+                const SizedBox(height: 12),
+                // Medical disclaimer
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.amber[800],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          AIService.medicalDisclaimer,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber[900],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+      ],
+    );
+  }
+
+  // Helper method to build recommendation cards by type (AI or basic)
+  List<Widget> _buildRecommendationsByType(bool isAI) {
+    final filteredRecs =
+        _recommendations.where((rec) => rec['isAI'] == isAI).toList();
+
+    if (filteredRecs.isEmpty) {
+      return [];
+    }
+
+    return filteredRecs.map((rec) {
       return Card(
-        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 8),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'No suggestions at the moment',
-            style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                isAI ? Icons.psychology_outlined : Icons.lightbulb_outline,
+                color: isAI
+                    ? Theme.of(context).colorScheme.secondary
+                    : Theme.of(context).colorScheme.primary,
+                size: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  rec['content'],
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
           ),
         ),
       );
-    }
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: _recommendations
-              .map((rec) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 2),
-                          child: Icon(
-                            Icons.tips_and_updates_outlined,
-                            size: 18,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            rec,
-                            style: TextStyle(
-                              height: 1.3,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ))
-              .toList(),
-        ),
-      ),
-    );
+    }).toList();
   }
 
   String _formatCleaningSummary(CleaningEntry entry) {
