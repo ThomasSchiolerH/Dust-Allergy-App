@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'services/firebase_options.dart';
 import 'screens/login_screen.dart';
@@ -14,6 +15,15 @@ import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load .env file
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // Fallback to empty environment if file not found
+    print("Warning: .env file not found. Using empty environment.");
+  }
+
   tz.initializeTimeZones();
   await NotificationService.init();
   await Firebase.initializeApp(

@@ -37,6 +37,9 @@ dependencies:
   firebase_core: ^3.4.0
   intl: ^0.18.1
   flutter_local_notifications: ^16.1.0
+  http: ^1.1.0
+  flutter_dotenv: ^5.1.0
+  google_generative_ai: ^0.2.0
 
   firebase_auth: ^5.2.0
   cloud_firestore: any
@@ -47,7 +50,6 @@ dependencies:
   share_plus: ^10.1.4
   open_filex: ^4.7.0
   google_fonts: ^6.2.1
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -81,6 +83,7 @@ flutter:
   assets:
     - assets/images/google_icon.png
     - assets/images/dust_icon.png
+    - .env
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
