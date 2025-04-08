@@ -21,23 +21,24 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
   final List<Map<String, dynamic>> _tabs = [
     {
       'title': 'Symptom Log',
-      'screen': const SymptomLogScreen(),
+      'screen': const SymptomLogScreen(key: ValueKey('symptom')),
       'icon': Icons.sick_outlined,
       'activeIcon': Icons.sick,
     },
     {
       'title': 'Cleaning Log',
-      'screen': const CleaningLogScreen(),
+      'screen': const CleaningLogScreen(key: ValueKey('cleaning')),
       'icon': Icons.cleaning_services_outlined,
       'activeIcon': Icons.cleaning_services,
     },
     {
       'title': 'Dashboard',
-      'screen': const DashboardScreen(),
+      'screen': const DashboardScreen(key: ValueKey('dashboard')),
       'icon': Icons.insights_outlined,
       'activeIcon': Icons.insights,
     },
   ];
+
 
   @override
   void initState() {
@@ -46,14 +47,11 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
   }
 
   void _onTabTapped(int index) {
-    if (index == _currentIndex) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BottomNavWrapper(selectedIndex: index),
-      ),
-    );
+    setState(() {
+      _currentIndex = index;
+    });
   }
+
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
@@ -129,7 +127,10 @@ class _BottomNavWrapperState extends State<BottomNavWrapper> {
           )
         ],
       ),
-      body: tab['screen'],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _tabs.map((tab) => tab['screen'] as Widget).toList(),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,

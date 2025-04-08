@@ -19,7 +19,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await FirebaseAuth.instance.signOut(); // <-- TEMPORARY RESET
+  // await FirebaseAuth.instance.signOut(); // <-- TEMPORARY RESET
   runApp(const MyApp());
 }
 
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
           iconTheme: const IconThemeData(color: Color(0xFF4285F4)),
         ),
         scaffoldBackgroundColor: Colors.white,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -68,6 +68,7 @@ class MyApp extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             textStyle: const TextStyle(
+              inherit: true, // <-- KEY PART
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
@@ -134,12 +135,12 @@ class MyApp extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           elevation: 0,
-          color: const Color(0xFF242424),
+          color: Colors.grey.shade50,
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: Color(0xFF1E1E1E),
