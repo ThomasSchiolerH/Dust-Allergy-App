@@ -48,6 +48,7 @@ class _SymptomLogScreenState extends State<SymptomLogScreen> {
     if (user != null) {
       final entry = SymptomEntry(
         date: _selectedDate,
+        createdAt: DateTime.now(),
         severity: _severity,
         description: _descController.text,
         congestion: _congestion,

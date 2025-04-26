@@ -9,6 +9,9 @@ import 'package:intl/intl.dart';
 import 'dart:collection';
 import '../services/ai_service.dart';
 import '../screens/ai_chat_screen.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
+import '../widgets/combined_line_cleaning_chart.dart';
+import '../widgets/cleaning_effect_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -79,13 +82,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _symptomEntries = symptomsSnapshot.docs.map((doc) {
         final data = doc.data();
+        // parse required date
+        final dateTs = data['date'] as Timestamp;
+        final date = dateTs.toDate();
+        // safely parse createdAt or fall back to date
+        final createdAtTs = data['createdAt'] as Timestamp?;
+        final createdAt = createdAtTs?.toDate() ?? date;
+
         return SymptomEntry(
-          date: (data['date'] as Timestamp).toDate(),
-          severity: data['severity'],
-          description: data['description'],
-          congestion: data['congestion'] ?? false,
-          itchingEyes: data['itchingEyes'] ?? false,
-          headache: data['headache'] ?? false,
+          date: date,
+          createdAt: createdAt,
+          severity: data['severity'] as int,
+          description: data['description'] as String?,
+          congestion: data['congestion'] as bool? ?? false,
+          itchingEyes: data['itchingEyes'] as bool? ?? false,
+          headache: data['headache'] as bool? ?? false,
         );
       }).toList();
 
@@ -93,12 +104,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final data = doc.data();
         return CleaningEntry(
           date: (data['date'] as Timestamp).toDate(),
-          windowOpened: data['windowOpened'],
-          windowDuration: data['windowDuration'],
-          vacuumed: data['vacuumed'],
-          floorWashed: data['floorWashed'],
-          bedsheetsWashed: data['bedsheetsWashed'],
-          clothesOnFloor: data['clothesOnFloor'],
+          windowOpened: data['windowOpened'] as bool,
+          windowDuration: data['windowDuration'] as int,
+          vacuumed: data['vacuumed'] as bool,
+          floorWashed: data['floorWashed'] as bool,
+          bedsheetsWashed: data['bedsheetsWashed'] as bool,
+          clothesOnFloor: data['clothesOnFloor'] as bool,
         );
       }).toList();
 
@@ -112,6 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Load AI recommendations if available
     _loadAIRecommendations();
   }
+
 
   List<FlSpot> _buildSymptomSpots() {
     // Get filtered entries based on selected timeframe
@@ -399,6 +411,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
   }
+  /// Returns only the cleaning entries in the currently selected timeframe.
+  List<CleaningEntry> _getFilteredCleaningEntries() {
+    final now = DateTime.now();
+
+    switch (_selectedTimeframe) {
+      case 'Last 7 days':
+        return _cleaningEntries
+            .where((e) => e.date.isAfter(now.subtract(const Duration(days: 7))))
+            .toList();
+      case 'Last 30 days':
+        return _cleaningEntries
+            .where((e) => e.date.isAfter(now.subtract(const Duration(days: 30))))
+            .toList();
+      case 'Last 3 months':
+        return _cleaningEntries
+            .where((e) => e.date.isAfter(now.subtract(const Duration(days: 90))))
+            .toList();
+      case 'All time':
+      default:
+        return List.from(_cleaningEntries);
+    }
+  }
+
 
   // Helper to filter symptom entries based on selected timeframe
   List<SymptomEntry> _getFilteredSymptomEntries() {
@@ -435,67 +470,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadData,
-              child: _symptomEntries.isEmpty
-                  ? Stack(
-                      children: [
-                        _buildEmptyState(),
-                        ListView(), // This allows the refresh indicator to work with an empty view
-                      ],
-                    )
-                  : CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverAppBar(
-                          expandedHeight: 120,
-                          pinned: true,
-                          flexibleSpace: FlexibleSpaceBar(
-                            title: const Text('Insights'),
-                            background: Container(
-                              color: isDark
-                                  ? theme.cardColor
-                                  : theme.primaryColor.withOpacity(0.05),
-                            ),
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildTimeframeSelector(),
-                                const SizedBox(height: 16),
-                                _buildSectionHeader(
-                                    context, 'Symptom Severity Over Time'),
-                                _buildChartCard(),
-                                const SizedBox(height: 24),
-                                _buildSectionHeader(
-                                    context, 'Symptom Analysis'),
-                                _buildSymptomTypesChart(),
-                                const SizedBox(height: 24),
-                                _buildSectionHeader(context, 'Cleaning Impact'),
-                                _buildCleaningImpactChart(),
-                                const SizedBox(height: 24),
-                                _buildSectionHeader(
-                                    context, 'Time of Day Patterns'),
-                                _buildTimeOfDayChart(),
-                                const SizedBox(height: 24),
-                                _buildSectionHeader(
-                                    context, 'Recent Cleaning Events'),
-                                _buildCleaningEventsList(),
-                                const SizedBox(height: 24),
-                                _buildSectionHeader(context, 'Recommendations'),
-                                _buildRecommendationsSection(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+        onRefresh: _loadData,
+        child: _symptomEntries.isEmpty
+            ? Stack(
+          children: [
+            _buildEmptyState(),
+            ListView(), // enables pull‐to‐refresh on empty
+          ],
+        )
+            : CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 120,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(
+                title: const Text('Insights'),
+                background: Container(
+                  color: isDark
+                      ? theme.cardColor
+                      : theme.primaryColor.withOpacity(0.05),
+                ),
+              ),
             ),
+
+            // One big sliver containing your selector + all charts
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTimeframeSelector(),
+                    const SizedBox(height: 16),
+
+                    // Section header
+                    _buildSectionHeader(
+                        context, 'Symptom Severity Over Time'),
+
+                    // ← Your new combined chart:
+                    _buildFreshnessLegend(),
+                    const SizedBox(height: 8),
+
+                    SizedBox(
+                      height: 240,
+                      child: CombinedLineCleaningChart(
+                        symptoms: _getFilteredSymptomEntries(),
+                        cleanings: _getFilteredCleaningEntries(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(context, 'Before vs. After Cleaning Effect'),
+                    SizedBox(
+                      height: 300,
+                      child: CleaningEffectChart(
+                        symptoms: _getFilteredSymptomEntries(),
+                        cleanings: _getFilteredCleaningEntries(),
+                      ),
+                    ),
+
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                        context, 'Symptom Analysis'),
+                    _buildSymptomTypesChart(),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                        context, 'Cleaning Impact'),
+                    _buildCleaningImpactChart(),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                        context, 'Time of Day Patterns'),
+                    _buildTimeOfDayChart(),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                        context, 'Recent Cleaning Events'),
+                    _buildCleaningEventsList(),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader(
+                        context, 'Recommendations'),
+                    _buildRecommendationsSection(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
+
 
   Widget _buildEmptyState() {
     return Center(
@@ -555,6 +624,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+  Widget _buildFreshnessLegend() {
+    Widget dot(Color c) => Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+    );
+    Widget item(Color c, String label) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        dot(c),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        item(Colors.green, '< 2h'),
+        item(Colors.yellow, '< 10h'),
+        item(Colors.red, '≥ 10h'),
+      ],
+    );
+  }
+
 
   Widget _buildChartCard() {
     return Card(
