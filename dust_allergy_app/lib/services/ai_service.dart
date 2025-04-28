@@ -108,9 +108,9 @@ class AIService {
     }
 
     // Check if the question is related to dust allergies
-    if (!_isRelevantQuestion(userQuestion)) {
-      return 'I can only answer questions related to dust allergies, symptoms, cleaning methods, and allergy management. Please ask a question related to those topics.';
-    }
+    // if (!_isRelevantQuestion(userQuestion)) {
+    //   return 'I can only answer questions related to dust allergies, symptoms, cleaning methods, and allergy management. Please ask a question related to those topics.';
+    // }
 
     try {
       // Create a chat session with Gemini
@@ -141,83 +141,74 @@ class AIService {
         Content.text('$fullPrompt$historyText User: $userQuestion'),
       );
 
-      if (response.text != null) {
-        // Double-check that the response is relevant to dust allergies
-        final responseText = response.text!;
-        if (_containsIrrelevantContent(responseText)) {
-          return 'I can only provide information about dust allergies and allergy management. Please ask a question related to those topics.';
-        }
-        return responseText;
-      } else {
         return 'I\'m having trouble generating a response right now. Please try again later.';
-      }
     } catch (e) {
       return 'An error occurred: ${e.toString()}';
     }
   }
 
   // Helper method to check if a question is relevant to dust allergies
-  static bool _isRelevantQuestion(String question) {
-    question = question.toLowerCase();
+  // static bool _isRelevantQuestion(String question) {
+  //   question = question.toLowerCase();
 
-    // Keywords related to dust allergies
-    final relevantKeywords = [
-      'dust',
-      'allerg',
-      'symptom',
-      'clean',
-      'sneez',
-      'cough',
-      'congestion',
-      'breath',
-      'asthma',
-      'itchy',
-      'eye',
-      'nose',
-      'throat',
-      'lungs',
-      'vacuum',
-      'filter',
-      'mite',
-      'pollen',
-      'dander',
-      'air',
-      'purifier',
-      'bedding',
-      'mattress',
-      'pillow',
-      'humidity',
-      'indoor',
-      'mold',
-      'nasal',
-      'medication',
-      'antihistamine',
-      'decongestant',
-      'hepa',
-      'wash',
-      'laundry',
-      'carpet',
-      'floor',
-      'rug',
-      'curtain',
-      'furniture',
-      'dust-free',
-      'immune',
-      'trigger',
-      'irritant',
-      'react',
-      'sensitive',
-      'home',
-      'environment',
-      'bedroom',
-      'living room',
-      'kitchen',
-      'bathroom'
-    ];
+  //   // Keywords related to dust allergies
+  //   final relevantKeywords = [
+  //     'dust',
+  //     'allerg',
+  //     'symptom',
+  //     'clean',
+  //     'sneez',
+  //     'cough',
+  //     'congestion',
+  //     'breath',
+  //     'asthma',
+  //     'itchy',
+  //     'eye',
+  //     'nose',
+  //     'throat',
+  //     'lungs',
+  //     'vacuum',
+  //     'filter',
+  //     'mite',
+  //     'pollen',
+  //     'dander',
+  //     'air',
+  //     'purifier',
+  //     'bedding',
+  //     'mattress',
+  //     'pillow',
+  //     'humidity',
+  //     'indoor',
+  //     'mold',
+  //     'nasal',
+  //     'medication',
+  //     'antihistamine',
+  //     'decongestant',
+  //     'hepa',
+  //     'wash',
+  //     'laundry',
+  //     'carpet',
+  //     'floor',
+  //     'rug',
+  //     'curtain',
+  //     'furniture',
+  //     'dust-free',
+  //     'immune',
+  //     'trigger',
+  //     'irritant',
+  //     'react',
+  //     'sensitive',
+  //     'home',
+  //     'environment',
+  //     'bedroom',
+  //     'living room',
+  //     'kitchen',
+  //     'bathroom'
+  //   ];
 
-    // Check if any relevant keyword is in the question
-    return relevantKeywords.any((keyword) => question.contains(keyword));
-  }
+  //   // Check if any relevant keyword is in the question
+  //   return relevantKeywords.any((keyword) => question.contains(keyword));
+  // }
 
   // Helper method to check if response contains irrelevant content
   static bool _containsIrrelevantContent(String response) {

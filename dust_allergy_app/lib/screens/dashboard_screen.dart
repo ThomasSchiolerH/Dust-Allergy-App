@@ -10,8 +10,9 @@ import 'dart:collection';
 import '../services/ai_service.dart';
 import '../screens/ai_chat_screen.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import '../widgets/combined_line_cleaning_chart.dart';
+// import '../widgets/combined_line_cleaning_chart.dart';
 import '../widgets/cleaning_effect_chart.dart';
+import '../widgets/event_effect_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -44,6 +45,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Last 30 days',
     'Last 3 months',
     'All time'
+  ];
+
+  // Add a field to track the selected chart
+  String _selectedChart = 'Symptom Severity Over Time';
+
+  // Define chart options
+  final List<String> _chartOptions = [
+    'Symptom Severity Over Time',
+    'Before vs. After Cleaning Effect',
+    'Symptom Analysis',
+    'Cleaning Impact',
+    'Time of Day Patterns',
   ];
 
   @override
@@ -123,7 +136,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Load AI recommendations if available
     _loadAIRecommendations();
   }
-
 
   List<FlSpot> _buildSymptomSpots() {
     // Get filtered entries based on selected timeframe
@@ -411,6 +423,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
   }
+
   /// Returns only the cleaning entries in the currently selected timeframe.
   List<CleaningEntry> _getFilteredCleaningEntries() {
     final now = DateTime.now();
@@ -422,18 +435,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .toList();
       case 'Last 30 days':
         return _cleaningEntries
-            .where((e) => e.date.isAfter(now.subtract(const Duration(days: 30))))
+            .where(
+                (e) => e.date.isAfter(now.subtract(const Duration(days: 30))))
             .toList();
       case 'Last 3 months':
         return _cleaningEntries
-            .where((e) => e.date.isAfter(now.subtract(const Duration(days: 90))))
+            .where(
+                (e) => e.date.isAfter(now.subtract(const Duration(days: 90))))
             .toList();
       case 'All time':
       default:
         return List.from(_cleaningEntries);
     }
   }
-
 
   // Helper to filter symptom entries based on selected timeframe
   List<SymptomEntry> _getFilteredSymptomEntries() {
@@ -461,6 +475,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Add a method to build the chart based on the selected option
+  Widget _buildSelectedChart() {
+    switch (_selectedChart) {
+      case 'Before vs. After Cleaning Effect':
+        return SizedBox(
+          height: 300,
+          child: CleaningEffectChart(
+            symptoms: _getFilteredSymptomEntries(),
+            cleanings: _getFilteredCleaningEntries(),
+          ),
+        );
+      case 'Symptom Analysis':
+        return _buildSymptomTypesChart();
+      case 'Cleaning Impact':
+        return _buildCleaningImpactChart();
+      case 'Time of Day Patterns':
+        return _buildTimeOfDayChart();
+      case 'Symptom Severity Over Time':
+      default:
+        return SizedBox(
+          height: 300,
+          child: EventEffectChart(
+            symptoms: _getFilteredSymptomEntries(),
+            cleanings: _getFilteredCleaningEntries(),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -470,101 +513,107 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-        onRefresh: _loadData,
-        child: _symptomEntries.isEmpty
-            ? Stack(
-          children: [
-            _buildEmptyState(),
-            ListView(), // enables pull‐to‐refresh on empty
-          ],
-        )
-            : CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 120,
-              pinned: true,
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text('Insights'),
-                background: Container(
-                  color: isDark
-                      ? theme.cardColor
-                      : theme.primaryColor.withOpacity(0.05),
-                ),
-              ),
-            ),
+              onRefresh: _loadData,
+              child: _symptomEntries.isEmpty
+                  ? Stack(
+                      children: [
+                        _buildEmptyState(),
+                        ListView(), // enables pull‐to‐refresh on empty
+                      ],
+                    )
+                  : CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverAppBar(
+                          expandedHeight: 120,
+                          pinned: true,
+                          flexibleSpace: FlexibleSpaceBar(
+                            title: const Text('Insights'),
+                            background: Container(
+                              color: isDark
+                                  ? theme.cardColor
+                                  : theme.primaryColor.withOpacity(0.05),
+                            ),
+                          ),
+                        ),
 
-            // One big sliver containing your selector + all charts
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTimeframeSelector(),
-                    const SizedBox(height: 16),
+                        // One big sliver containing your selector + all charts
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTimeframeSelector(),
+                                const SizedBox(height: 16),
 
-                    // Section header
-                    _buildSectionHeader(
-                        context, 'Symptom Severity Over Time'),
+                                // Dropdown for chart selection
+                                Card(
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Select Chart:',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            color: isDark
+                                                ? Colors.white70
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: DropdownButton<String>(
+                                            value: _selectedChart,
+                                            underline: const SizedBox(),
+                                            isExpanded: true,
+                                            items: _chartOptions.map((String option) {
+                                              return DropdownMenuItem<String>(
+                                                value: option,
+                                                child: Text(option),
+                                              );
+                                            }).toList(),
+                                            onChanged: (String? newValue) {
+                                              if (newValue != null) {
+                                                setState(() {
+                                                  _selectedChart = newValue;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
 
-                    // ← Your new combined chart:
-                    _buildFreshnessLegend(),
-                    const SizedBox(height: 8),
+                                // Display the selected chart
+                                _buildSelectedChart(),
 
-                    SizedBox(
-                      height: 240,
-                      child: CombinedLineCleaningChart(
-                        symptoms: _getFilteredSymptomEntries(),
-                        cleanings: _getFilteredCleaningEntries(),
-                      ),
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(
+                                    context, 'Recent Cleaning Events'),
+                                _buildCleaningEventsList(),
+
+                                const SizedBox(height: 24),
+                                _buildSectionHeader(
+                                    context, 'Recommendations'),
+                                _buildRecommendationsSection(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(context, 'Before vs. After Cleaning Effect'),
-                    SizedBox(
-                      height: 300,
-                      child: CleaningEffectChart(
-                        symptoms: _getFilteredSymptomEntries(),
-                        cleanings: _getFilteredCleaningEntries(),
-                      ),
-                    ),
-
-
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(
-                        context, 'Symptom Analysis'),
-                    _buildSymptomTypesChart(),
-
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(
-                        context, 'Cleaning Impact'),
-                    _buildCleaningImpactChart(),
-
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(
-                        context, 'Time of Day Patterns'),
-                    _buildTimeOfDayChart(),
-
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(
-                        context, 'Recent Cleaning Events'),
-                    _buildCleaningEventsList(),
-
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(
-                        context, 'Recommendations'),
-                    _buildRecommendationsSection(),
-                  ],
-                ),
-              ),
             ),
-          ],
-        ),
-      ),
     );
   }
-
 
   Widget _buildEmptyState() {
     return Center(
@@ -624,20 +673,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
   Widget _buildFreshnessLegend() {
     Widget dot(Color c) => Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-    );
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+        );
     Widget item(Color c, String label) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        dot(c),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            dot(c),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 12)),
+          ],
+        );
 
     return Wrap(
       spacing: 16,
@@ -649,7 +699,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-
 
   Widget _buildChartCard() {
     return Card(

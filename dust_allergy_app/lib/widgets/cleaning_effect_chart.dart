@@ -121,14 +121,14 @@ class CleaningEffectChart extends StatelessWidget {
           xValueMapper: (d, _) => d.type,
           yValueMapper: (d, _) => d.beforeAvg,
           name: '1 Day Before',
-          dataLabelSettings: const DataLabelSettings(isVisible: true),
+          // dataLabelSettings: const DataLabelSettings(isVisible: true),
         ),
         ColumnSeries<_EffectData, String>(
           dataSource: data,
           xValueMapper: (d, _) => d.type,
           yValueMapper: (d, _) => d.afterAvg,
           name: '1 Day After',
-          dataLabelSettings: const DataLabelSettings(isVisible: true),
+          // dataLabelSettings: const DataLabelSettings(isVisible: true),
         ),
         LineSeries<_EffectData, String>(
           dataSource: data,

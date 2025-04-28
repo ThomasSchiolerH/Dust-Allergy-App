@@ -85,29 +85,29 @@ class _AIChatScreenState extends State<AIChatScreen> {
       final response = await AIService.chatWithAI(userMessage, messageHistory);
 
       // Check if it's an off-topic message
-      final isOffTopicResponse = response.contains(
-              'I can only answer questions related to dust allergies') ||
-          response
-              .contains('I can only provide information about dust allergies');
+      // final isOffTopicResponse = response.contains(
+      //         'I can only answer questions related to dust allergies') ||
+      //     response
+      //         .contains('I can only provide information about dust allergies');
 
       setState(() {
         _messages.add(ChatMessage(content: response, role: 'assistant'));
 
         // If this was an off-topic question, add a hint message
-        if (isOffTopicResponse && !_hasShownOffTopicHint) {
-          _hasShownOffTopicHint = true;
-          Future.delayed(const Duration(milliseconds: 500), () {
-            setState(() {
-              _messages.add(ChatMessage(
-                content:
-                    'Try asking questions like "How can I reduce dust in my bedroom?" or "What cleaning methods help with dust allergies?"',
-                role: 'hint',
-              ));
-              // Scroll to show the hint
-              _scrollToBottom();
-            });
-          });
-        }
+        // if (isOffTopicResponse && !_hasShownOffTopicHint) {
+        //   _hasShownOffTopicHint = true;
+        //   Future.delayed(const Duration(milliseconds: 500), () {
+        //     setState(() {
+        //       _messages.add(ChatMessage(
+        //         content:
+        //             'Try asking questions like "How can I reduce dust in my bedroom?" or "What cleaning methods help with dust allergies?"',
+        //         role: 'hint',
+        //       ));
+        //       // Scroll to show the hint
+        //       _scrollToBottom();
+        //     });
+        //   });
+        // }
 
         _isTyping = false;
       });
