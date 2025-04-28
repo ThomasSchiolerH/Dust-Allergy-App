@@ -575,7 +575,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             items: _chartOptions.map((String option) {
                                               return DropdownMenuItem<String>(
                                                 value: option,
-                                                child: Text(option),
+                                                child: Align(
+                                                  alignment: Alignment.centerRight, // Align text to the right
+                                                  child: Text(
+                                                    option,
+                                                    style: TextStyle(
+                                                      fontSize: 14, // Adjusted font size for better UX
+                                                      fontWeight: FontWeight.w400,
+                                                      color: isDark ? Colors.white70 : Colors.black87,
+                                                    ),
+                                                  ),
+                                                ),
                                               );
                                             }).toList(),
                                             onChanged: (String? newValue) {
