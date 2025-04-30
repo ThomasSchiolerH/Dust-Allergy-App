@@ -31,6 +31,35 @@ class EventEffectChart extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Text(
+          'Symptom Log Delay Indicator',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black87,
+          ),
+        ),
+      ),
+      Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 16,
+        children: [
+          _buildLegendItem(Colors.green, 'Logged <12h'),
+          _buildLegendItem(Colors.amber, '12–48h'),
+          _buildLegendItem(Colors.red, '>48h'),
+        ],
+      ),
+    ],
+  ),
+),
+
           Expanded(
             child: SfCartesianChart(
               tooltipBehavior: TooltipBehavior(
@@ -60,7 +89,8 @@ class EventEffectChart extends StatelessWidget {
                   textStyle: const TextStyle(fontSize: 12),
                 ),
               ),
-              series: [
+              series: <CartesianSeries>[
+                // 1. Existing AreaSeries for the shaded severity trend
                 AreaSeries<SymptomEntry, DateTime>(
                   name: 'Symptoms',
                   dataSource: sortedSymptoms,
@@ -76,7 +106,29 @@ class EventEffectChart extends StatelessWidget {
                   ),
                   borderColor: Theme.of(context).colorScheme.primary,
                   borderWidth: 2,
-                  markerSettings: const MarkerSettings(isVisible: true),
+                  markerSettings: const MarkerSettings(
+                      isVisible: false), // hide default markers
+                ),
+
+                // 2. Overlayed ScatterSeries with colored circles
+                ScatterSeries<SymptomEntry, DateTime>(
+                  name: 'Symptom Points',
+                  dataSource: sortedSymptoms,
+                  xValueMapper: (entry, _) => entry.date,
+                  yValueMapper: (entry, _) => entry.severity,
+                  pointColorMapper: (entry, _) {
+                    final delay =
+                        entry.createdAt.difference(entry.date).inHours.abs();
+                    if (delay <= 6) return Colors.green;
+                    if (delay <= 24) return Colors.amber;
+                    return Colors.red;
+                  },
+                  markerSettings: const MarkerSettings(
+                    isVisible: true,
+                    height: 8,
+                    width: 8,
+                    shape: DataMarkerType.circle,
+                  ),
                 ),
               ],
             ),
