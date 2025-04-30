@@ -32,34 +32,34 @@ class EventEffectChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Text(
-          'Symptom Log Delay Indicator',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black87,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'Symptom Log Delay Indicator',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).textTheme.bodyMedium?.color ??
+                          Colors.black87,
+                    ),
+                  ),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  children: [
+                    _buildLegendItem(Colors.green, 'Logged <12h'),
+                    _buildLegendItem(Colors.amber, '12–48h'),
+                    _buildLegendItem(Colors.red, '>48h'),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-      Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 16,
-        children: [
-          _buildLegendItem(Colors.green, 'Logged <12h'),
-          _buildLegendItem(Colors.amber, '12–48h'),
-          _buildLegendItem(Colors.red, '>48h'),
-        ],
-      ),
-    ],
-  ),
-),
-
           Expanded(
             child: SfCartesianChart(
               tooltipBehavior: TooltipBehavior(
