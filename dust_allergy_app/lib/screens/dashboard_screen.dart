@@ -53,7 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Define chart options
   final List<String> _chartOptions = [
     'Symptom Severity Over Time',
-    'Before vs. After Cleaning Effect',
+    // 'Before vs. After Cleaning Effect',
     'Symptom Analysis',
     'Cleaning Impact',
     'Time of Day Patterns',
@@ -478,14 +478,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Add a method to build the chart based on the selected option
   Widget _buildSelectedChart() {
     switch (_selectedChart) {
-      case 'Before vs. After Cleaning Effect':
-        return SizedBox(
-          height: 300,
-          child: CleaningEffectChart(
-            symptoms: _getFilteredSymptomEntries(),
-            cleanings: _getFilteredCleaningEntries(),
-          ),
-        );
+      // case 'Before vs. After Cleaning Effect':
+      //   return SizedBox(
+      //     height: 300,
+      //     child: CleaningEffectChart(
+      //       symptoms: _getFilteredSymptomEntries(),
+      //       cleanings: _getFilteredCleaningEntries(),
+      //     ),
+      //   );
       case 'Symptom Analysis':
         return _buildSymptomTypesChart();
       case 'Cleaning Impact':
