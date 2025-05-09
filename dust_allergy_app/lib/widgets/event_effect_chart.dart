@@ -26,7 +26,7 @@ class EventEffectChart extends StatelessWidget {
     final axisMax = sortedSymptoms.last.date.add(const Duration(days: 1));
 
     return SizedBox(
-      height: 360, // enough for chart + legend together
+      height: 360,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,7 +93,6 @@ class EventEffectChart extends StatelessWidget {
                 ),
               ),
               series: <CartesianSeries>[
-                // 1. Existing AreaSeries for the shaded severity trend
                 AreaSeries<SymptomEntry, DateTime>(
                   name: 'Symptoms',
                   dataSource: sortedSymptoms,
@@ -110,10 +109,10 @@ class EventEffectChart extends StatelessWidget {
                   borderColor: Theme.of(context).colorScheme.primary,
                   borderWidth: 2,
                   markerSettings: const MarkerSettings(
-                      isVisible: false), // hide default markers
+                      isVisible: false),
                 ),
 
-                // 2. Overlayed ScatterSeries with colored circles
+                // Overlayed ScatterSeries with colored circles
                 ScatterSeries<SymptomEntry, DateTime>(
                   name: 'Symptom Points',
                   dataSource: sortedSymptoms,
@@ -250,7 +249,7 @@ class EventEffectChart extends StatelessWidget {
 
     for (final entry in firstCleaningPerDay.entries) {
       final cleaning = entry.value;
-      Color color = Colors.blueGrey.withOpacity(0.05); // ultra-light base
+      Color color = Colors.blueGrey.withOpacity(0.05);
 
       if (cleaning.vacuumed)
         color = Colors.blue.withOpacity(0.1);

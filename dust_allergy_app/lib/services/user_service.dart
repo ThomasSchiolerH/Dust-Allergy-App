@@ -11,7 +11,7 @@ class UserService {
 
     final userDoc = _db.collection('users').doc(user.uid);
 
-    // 1. Delete subcollections
+    // Delete subcollections
     final subcollections = ['symptoms', 'cleaningLogs', 'sensorData'];
     for (final sub in subcollections) {
       final snapshots = await userDoc.collection(sub).get();

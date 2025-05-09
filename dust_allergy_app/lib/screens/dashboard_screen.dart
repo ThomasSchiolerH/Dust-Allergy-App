@@ -95,10 +95,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _symptomEntries = symptomsSnapshot.docs.map((doc) {
         final data = doc.data();
-        // parse required date
         final dateTs = data['date'] as Timestamp;
         final date = dateTs.toDate();
-        // safely parse createdAt or fall back to date
         final createdAtTs = data['createdAt'] as Timestamp?;
         final createdAt = createdAtTs?.toDate() ?? date;
 
@@ -136,6 +134,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Load AI recommendations if available
     _loadAIRecommendations();
   }
+
+  double _weeklyAverageSeverity() {
+    final now = DateTime.now();
+    final oneWeekAgo = now.subtract(const Duration(days: 7));
+    final lastWeekEntries =
+        _symptomEntries.where((e) => e.date.isAfter(oneWeekAgo)).toList();
+    if (lastWeekEntries.isEmpty) return 0;
+    final total =
+        lastWeekEntries.map((e) => e.severity).reduce((a, b) => a + b);
+    return total / lastWeekEntries.length;
+  }
+
+  int _weeklyCleaningCount() {
+    final now = DateTime.now();
+    final oneWeekAgo = now.subtract(const Duration(days: 7));
+    return _cleaningEntries.where((e) => e.date.isAfter(oneWeekAgo)).length;
+  }
+
+  int _daysSinceLastCleaning() {
+    if (_cleaningEntries.isEmpty) return -1;
+    return DateTime.now().difference(_cleaningEntries.last.date).inDays;
+  }
+
+  Widget _buildSummaryCards() {
+    final avgSeverity = _weeklyAverageSeverity();
+    final cleaningsThisWeek = _weeklyCleaningCount();
+    final daysSinceClean = _daysSinceLastCleaning();
+
+    final severityColor = avgSeverity >= 4
+        ? Colors.redAccent
+        : avgSeverity >= 2.5
+            ? Colors.orange
+            : Colors.green;
+
+    final lastCleanColor = daysSinceClean <= 1
+        ? Colors.green
+        : daysSinceClean <= 3
+            ? Colors.orange
+            : Colors.redAccent;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildInfoCard(
+                title: 'Weekly Severity',
+                value: avgSeverity.toStringAsFixed(1),
+                icon: Icons.thermostat,
+                color: severityColor,
+              ),
+              const SizedBox(width: 12),
+              _buildInfoCard(
+                title: 'Weekly Cleanings',
+                value: cleaningsThisWeek.toString(),
+                icon: Icons.format_list_numbered,
+                color: cleaningsThisWeek == 0 ? Colors.redAccent : Colors.blue,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildInfoCard(
+                title: 'Last Cleaned',
+                value: daysSinceClean == -1
+                    ? 'No Data'
+                    : '$daysSinceClean day${daysSinceClean == 1 ? '' : 's'} ago',
+                icon: Icons.cleaning_services,
+                color: lastCleanColor,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(value, style: TextStyle(color: color, fontSize: 16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   List<FlSpot> _buildSymptomSpots() {
     // Get filtered entries based on selected timeframe
@@ -239,7 +341,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      // Import the AIService
       final aiRecommendations = await AIService.generateRecommendations(
         symptoms: _symptomEntries,
         cleaning: _cleaningEntries,
@@ -518,7 +619,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ? Stack(
                       children: [
                         _buildEmptyState(),
-                        ListView(), // enables pull‐to‐refresh on empty
+                        ListView(),
                       ],
                     )
                   : CustomScrollView(
@@ -544,6 +645,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                _buildSummaryCards(),
                                 _buildTimeframeSelector(),
                                 const SizedBox(height: 16),
 
@@ -554,9 +656,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           'Select Chart:',
@@ -572,17 +676,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             value: _selectedChart,
                                             underline: const SizedBox(),
                                             isExpanded: true,
-                                            items: _chartOptions.map((String option) {
+                                            items: _chartOptions
+                                                .map((String option) {
                                               return DropdownMenuItem<String>(
                                                 value: option,
                                                 child: Align(
-                                                  alignment: Alignment.centerRight, // Align text to the right
+                                                  alignment:
+                                                      Alignment.centerRight,
                                                   child: Text(
                                                     option,
                                                     style: TextStyle(
-                                                      fontSize: 14, // Adjusted font size for better UX
-                                                      fontWeight: FontWeight.w400,
-                                                      color: isDark ? Colors.white70 : Colors.black87,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                      color: isDark
+                                                          ? Colors.white70
+                                                          : Colors.black87,
                                                     ),
                                                   ),
                                                 ),
@@ -612,8 +721,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 _buildCleaningEventsList(),
 
                                 const SizedBox(height: 24),
-                                _buildSectionHeader(
-                                    context, 'Recommendations'),
+                                _buildSectionHeader(context, 'Recommendations'),
                                 _buildRecommendationsSection(),
                               ],
                             ),

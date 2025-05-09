@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/bottom_nav_wrapper.dart';
 import '../screens/login_screen.dart';
+import '../screens/onboarding_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -12,18 +13,20 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        final user = snapshot.data;
-
-        if (user != null && user.emailVerified) {
-          return const BottomNavWrapper();
+        if (!snapshot.hasData) {
+          return const LoginScreen();
         }
 
-        return const LoginScreen();
+        return OnboardingScreen(
+          onDone: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const BottomNavWrapper()),
+            );
+          },
+        );
       },
     );
   }

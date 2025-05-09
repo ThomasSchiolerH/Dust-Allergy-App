@@ -13,13 +13,13 @@ class AIService {
   static bool get isConfigured =>
       _apiKey.isNotEmpty && _apiKey != 'your_gemini_api_key_here';
 
-  // Medical disclaimer that should be shown to users
+  // Medical disclaimer
   static const String medicalDisclaimer =
       'The recommendations provided by this AI assistant are for informational purposes only and '
       'do not constitute medical advice. Always consult with a healthcare professional regarding '
       'your specific health concerns or before making significant changes to your health routine.';
 
-  // Initialize Gemini model
+  // Initialize Gemini
   static GenerativeModel get _model => GenerativeModel(
         model: 'gemini-2.0-flash',
         apiKey: _apiKey,
@@ -284,7 +284,7 @@ class AIService {
 
   // Process AI response into a list of recommendations
   static List<String> _processRecommendations(String content) {
-    // Split by line breaks and numbered lists (1., 2., etc.)
+    // Split by line breaks and numbered lists
     final rawLines = content.split(RegExp(r'[\n\r]+'));
     final recommendations = <String>[];
 

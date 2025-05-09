@@ -1,15 +1,13 @@
-// lib/widgets/cleaning_effect_chart.dart
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import '../models/symptom_entry.dart';
 import '../models/cleaning_entry.dart';
 
-/// Holds the before/after averages and reliability for one cleaning type.
 class _EffectData {
   final String type;
   final double beforeAvg;
   final double afterAvg;
-  final double reliability; // between 0 and 1
+  final double reliability;
 
   _EffectData(this.type, this.beforeAvg, this.afterAvg, this.reliability);
 }
@@ -26,7 +24,6 @@ class CleaningEffectChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Maps to accumulate per‐event averages
     final Map<String, List<double>> eventBefore = {};
     final Map<String, List<double>> eventAfter  = {};
     final Map<String, int> totalEvents   = {};
