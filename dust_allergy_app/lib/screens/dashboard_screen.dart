@@ -13,6 +13,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 // import '../widgets/combined_line_cleaning_chart.dart';
 import '../widgets/cleaning_effect_chart.dart';
 import '../widgets/event_effect_chart.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -237,7 +238,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
 
   List<FlSpot> _buildSymptomSpots() {
     // Get filtered entries based on selected timeframe
@@ -1185,11 +1185,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  rec['content'],
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
+                  child: MarkdownBody(
+                data: rec['content'],
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+              )),
             ],
           ),
         ),

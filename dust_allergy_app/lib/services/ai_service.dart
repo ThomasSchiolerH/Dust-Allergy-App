@@ -141,7 +141,12 @@ class AIService {
         Content.text('$fullPrompt$historyText User: $userQuestion'),
       );
 
-        return 'I\'m having trouble generating a response right now. Please try again later.';
+      // return 'I\'m having trouble generating a response right now. Please try again later.';
+      final responseText = response.text;
+      if (responseText == null || responseText.trim().isEmpty) {
+        return 'Sorry, I couldn\'t generate a response. Please try again.';
+      }
+      return responseText;
     } catch (e) {
       return 'An error occurred: ${e.toString()}';
     }

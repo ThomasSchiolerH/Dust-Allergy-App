@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../models/symptom_entry.dart';
 import '../models/cleaning_entry.dart';
 import '../models/chat_message.dart';
@@ -280,10 +281,13 @@ class _AIChatScreenState extends State<AIChatScreen> {
                       : const Radius.circular(16),
                 ),
               ),
-              child: Text(
-                message.content,
-                style: TextStyle(color: textColor),
-              ),
+              child: isUser
+                  ? Text(message.content)
+                  : MarkdownBody(
+                      data: message.content,
+                      styleSheet:
+                          MarkdownStyleSheet.fromTheme(Theme.of(context)),
+                    ),
             ),
           ),
           if (isUser) const SizedBox(width: 8),
